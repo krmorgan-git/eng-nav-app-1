@@ -1,0 +1,52 @@
+{
+  "cow": {
+    "navajo": "Béégashii",
+    "image": "img/cow.jpg",
+    "audio": "audio/beegashii.mp3"
+  },
+  "horse": {
+    "navajo": "Łí̜í̜'",
+    "image": "img/horse.jpg",
+    "audio": "audio/lii.mp3"
+  },
+  "sheep": {
+    "navajo": "Dibé",
+    "image": "img/sheep.jpg",
+    "audio": "audio/dibe.mp3"
+  },
+  "goat": {
+    "navajo": "Tł'ízí",
+    "image": "img/goat.jpg",
+    "audio": "audio/tlizi.mp3"
+  },
+  "chicken": {
+    "navajo": "Na'ahóóhai",
+    "image": "img/chicken.jpg",
+    "audio": "audio/naahoohai.mp3"
+  },
+  "duck": {
+    "navajo": "Naal'eełí",
+    "image": "img/duck.jpg",
+    "audio": "audio/naaleeli.mp3"
+  },
+  "pig": {
+    "navajo": "Bisóodi",
+    "image": "img/pig.jpg",
+    "audio": "audio/bisoodi.mp3"
+  },
+  "turkey": {
+    "navajo": "Tązhii",
+    "image": "img/turkey.jpg",
+    "audio": "audio/tazhii.mp3"
+  },
+  "rabbit": {
+    "navajo": "Gah",
+    "image": "img/rabbit.jpg",
+    "audio": "audio/gah.mp3"
+  },
+  "dog": {
+    "navajo": "Łéécha̜a̜'í",
+    "image": "img/dog.jpg",
+    "audio": "audio/leechaai.mp3"
+  }
+}

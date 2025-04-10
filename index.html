@@ -1,0 +1,221 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English-Navajo Animal Translator</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link href="./css/styles.css" rel="stylesheet">
+
+  <style>
+    @font-face {
+      font-family: 'LucideIcons';
+      /* Using local Lucide font */
+      src: url(./fonts/lucide.ttf) format('truetype');
+    }
+    .lucide {
+      font-family: 'LucideIcons';
+      font-size: 1.25rem; /* Icon size */
+      line-height: 1;
+      vertical-align: middle;
+      margin-right: 0.25rem; /* Space after icon */
+    }
+  </style>
+
+  
+</head>
+<body class="bg-gradient-to-br from-sky-100 to-indigo-200 min-h-screen flex items-center justify-center font-sans p-4">
+  
+  <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center">
+        <span class="lucide">&#xea9f;</span> English-Navajo Translator
+    </h1>
+
+    <div class="mb-4">
+        <label for="englishWord" class="block text-sm font-medium text-gray-700 mb-1">Enter English Animal Name:</label>
+        <input type="text" id="englishWord" name="englishWord" placeholder="e.g., Cow, Horse, Sheep..." class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled>
+    </div>
+
+    <button id="translateButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out mb-4" disabled>
+        Translate to Navajo
+    </button>
+
+    <div id="resultArea" class="mt-4 p-4 bg-gray-50 rounded-md min-h-[80px] text-center border border-gray-200">
+        <p id="resultText" class="text-gray-500 italic mb-4">Loading translations...</p>
+        <div id="imageContainer" class="hidden mt-4">
+             <img id="animalImage" alt="Animal Image" class="w-full h-48 object-contain rounded-md mx-auto border border-gray-200" onerror="console.error('Image failed to load:', this.src)">
+             </div>
+             <button id="playAudioButton" class="hidden mt-3 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 rounded-md shadow text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                <span class="lucide">&#xea5f;</span> Play Audio
+             </button>
+    </div>
+
+    <details class="mt-4 text-sm text-gray-600">
+        <summary class="cursor-pointer hover:text-indigo-700">Show available words</summary>
+        <p class="mt-2 p-3 bg-gray-100 rounded-md border border-gray-200" id="availableWords">Loading...</p>
+    </details>
+  </div>
+
+  <script>
+    // --- Translator Logic ---
+
+    // Get references to frequently used HTML elements
+    const inputElement = document.getElementById('englishWord');
+    const buttonElement = document.getElementById('translateButton');
+    const resultTextElement = document.getElementById('resultText');
+    const availableWordsElement = document.getElementById('availableWords');
+    const imageContainerElement = document.getElementById('imageContainer'); // Reference to image container div
+    const animalImageElement = document.getElementById('animalImage'); // Reference to image element itself
+    const playAudioButtonElement = document.getElementById('playAudioButton'); // Reference to the play button
+
+    // Variable to store the translation data (words, image, audio URLs) once loaded
+    let translations = {};
+    let currentAudioPath = null; // Variable to store the path of the audio to be played
+
+    // --- Asynchronous Function to Load Data and Initialize App ---
+    // Fetches data from translations.json and sets up event listeners.
+    async function initializeTranslator() {
+        try {
+            // 1. Fetch the external JSON data file (must be in same directory)
+            const response = await fetch('./data/translations.json');
+
+            // 2. Check if the fetch request was successful (HTTP status 200-299)
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`); // Throw error if fetch failed
+            }
+
+            // 3. Parse the response body as JSON
+            //    The data structure is expected to be: { "english": {"navajo": "...", "image": "..."} }
+            translations = await response.json();
+
+            // 4. Data loaded successfully - Enable UI and set initial state
+            inputElement.disabled = false; // Enable text input
+            buttonElement.disabled = false; // Enable button
+            resultTextElement.textContent = 'Enter a word above and click translate.'; // Update status text
+            resultTextElement.className = 'text-gray-600 mb-4'; // Reset text style, ensure margin
+
+            // 5. Populate the "available words" list from the keys of the loaded data
+            availableWordsElement.textContent = Object.keys(translations)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first letter
+                .join(', '); // Join words with commas
+
+            // 6. Add event listeners for user interaction (only after data is ready)
+            buttonElement.addEventListener('click', translateWord); // Translate button click handler
+            inputElement.addEventListener('keypress', function(event) { // Enter key handler for input
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Prevent default form submit behavior
+                    translateWord(); // Trigger translation
+                }
+            });
+            playAudioButtonElement.addEventListener('click', playCurrentAudio); // Play button click handler
+
+        } catch (error) {
+            // Handle errors during the fetch or JSON parsing process
+            console.error('Error loading translations:', error); // Log error to console
+            // Display user-friendly error message
+            resultTextElement.textContent = 'Error: Could not load translation data. Please ensure translations.json exists and is valid.';
+            resultTextElement.className = 'text-red-600 font-semibold mb-4'; // Error styling
+            availableWordsElement.textContent = 'Failed to load.'; // Update available words status
+            // Ensure UI remains disabled
+            inputElement.disabled = true;
+            buttonElement.disabled = true;
+            imageContainerElement.classList.add('hidden'); // Hide image area on error
+        }
+    }
+
+    // --- Translation Function (Called by Event Listeners) ---
+    // Performs the lookup and updates the UI with translation and image.
+    function translateWord() {
+        // Safety check: Ensure translations object is populated before proceeding
+        if (Object.keys(translations).length === 0) {
+             resultTextElement.textContent = 'Translations not loaded yet.';
+             resultTextElement.className = 'text-yellow-600 mb-4';
+             imageContainerElement.classList.add('hidden'); // Hide image container
+             playAudioButtonElement.classList.add('hidden'); // Hide play button
+             currentAudioPath = null; // Clear audio path
+             return; // Exit if data isn't ready
+        }
+
+        // Get user input, trim whitespace, convert to lowercase for matching keys
+        const englishWord = inputElement.value.trim().toLowerCase();
+
+        // Check if input is empty after trimming
+        if (!englishWord) {
+            resultTextElement.textContent = 'Please enter an English word.';
+            resultTextElement.className = 'text-yellow-600 mb-4'; // Warning style
+            imageContainerElement.classList.add('hidden'); // Hide image container
+            playAudioButtonElement.classList.add('hidden'); // Hide play button
+            currentAudioPath = null; // Clear audio path
+            return; // Exit if input is empty
+        }
+
+        // Look up the processed word in the translations object
+        const translationData = translations[englishWord]; // This will be undefined or {navajo: ..., image: ...}
+
+        // Check if a translation was found
+        if (translationData) {
+            // --- Translation Found ---
+            const originalCaseWord = inputElement.value.trim(); // Get original input for display
+
+            // Update the text result area with the Navajo word
+            resultTextElement.innerHTML = `The Navajo word for '<span class="font-semibold">${originalCaseWord}</span>' is: <strong class="text-indigo-700 text-lg">${translationData.navajo}</strong>`;
+            resultTextElement.className = 'text-gray-800 mb-4'; // Reset text style
+
+            // Update the image element's src and alt attributes
+            animalImageElement.src = translationData.image;
+            animalImageElement.alt = `Image of ${originalCaseWord}`; // Set descriptive alt text
+            animalImageElement.style.display = 'block'; // Ensure image is visible (in case hidden by onerror)
+
+            // Make the image container visible
+            imageContainerElement.classList.remove('hidden');
+
+            // --- Setup Audio Button ---
+            if (translationData.audio) {
+                currentAudioPath = translationData.audio; // Store the path
+                playAudioButtonElement.classList.remove('hidden'); // Show the button
+            } else {
+                currentAudioPath = null; // No audio available
+                playAudioButtonElement.classList.add('hidden'); // Hide the button
+            }
+            // --- End Setup Audio Button ---
+
+        } else {
+            // --- Translation Not Found ---
+            // Display "not found" message
+            resultTextElement.textContent = `Sorry, the word '${inputElement.value.trim()}' was not found. Check the list of available words.`;
+            resultTextElement.className = 'text-red-600 mb-4'; // Error styling
+
+            // Hide the image container and play button, clear image/audio data
+            imageContainerElement.classList.add('hidden');
+            playAudioButtonElement.classList.add('hidden');
+            animalImageElement.src = ''; // Clear src to avoid showing old image
+            animalImageElement.alt = ''; // Clear alt text
+            currentAudioPath = null; // Clear audio path
+        }
+    }
+
+    // --- Audio Playback Function (Called by Play Button) ---
+    function playCurrentAudio() {
+        if (currentAudioPath) {
+            try {
+                const audio = new Audio(currentAudioPath);
+                audio.play().catch(error => {
+                    console.error("Error playing audio:", error);
+                    // Optional: Display a message if audio fails
+                });
+            } catch (error) {
+                console.error("Error creating audio element:", error);
+            }
+        } else {
+            console.warn("No audio path set to play.");
+        }
+    }
+
+    // --- Initialize the Application ---
+    // Call the async function to start loading the data and setting up the app.
+    initializeTranslator();
+
+  </script>
+
+</body>
+</html>
