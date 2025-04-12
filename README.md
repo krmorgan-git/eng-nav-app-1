@@ -5,8 +5,10 @@ To clone this repository, use the following command:
 
     git clone https://github.com/krmorgan-git/eng-nav-app-1.git
 
+- Note: The application must be running on a web server.
+
 ## Purpose
-This web applciaton can be modified to use other words that are translated from English to Navajo.
+This web applciaton is like a starter kit. It can be modified to use other words that are translated from English to Navajo.
 
 ## Data Included
 - English to Navajo word translations
